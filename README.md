@@ -26,39 +26,3 @@ Can be modify , to drive a http://gce-electronics.com/en/-usb/23-usb-relay-contr
 A homekit bridge , that will access a relay board expose by power-switch
 
 This brudge use the package [github.com/brutella/hc](https://github.com/brutella/hc] , for providing the HomeKit interface.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-- 
-
-
-
-
-
