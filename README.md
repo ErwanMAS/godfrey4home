@@ -21,6 +21,32 @@ Linux kernel must have these modules loaded
 
 Can be modify , to drive a http://gce-electronics.com/en/-usb/23-usb-relay-controller-x440.html
 
+src/homekit-switch.go
+ 
+A homekit bridge , that will access a relay board expose by power-switch
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
