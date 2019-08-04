@@ -109,12 +109,14 @@ func ReadSwitchStatus( sta chan SwitchStatus ) {
     lock = GetLockFile()
     if lock == nil {
         syscall.Close(lock.fd)
-        sta <- t_sta
+	sta <- t_sta
+	return
     }
 
     port, err := serial.Open(options)
     if err != nil {
-      sta <- t_sta      
+        sta <- t_sta
+        return
     }
     for i:=0; i <=1 ; i++ {
         t_sta.Switch[i] = -3
