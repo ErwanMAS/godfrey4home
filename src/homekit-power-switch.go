@@ -28,7 +28,7 @@ func getJson(url string, target interface{}) error {
    home made switch , that can be manage by http request
 
 
-# /cgi-bin/power-switch?sid=X&state=Y
+# /cgi-bin/power-switch-cgi?sid=X&state=Y
 #
 # X can be 1 or 2
 # Y can be get , on  or off
@@ -49,7 +49,7 @@ return this json when use with Y=off
 }
 
    ------------------------------------------------------------------------------------------ */
-var myRemoteSwitch = "http://192.168.111.111/cgi-bin/power-switch?sid=%s&state=%s"
+var myRemoteSwitch = "http://192.168.111.111/cgi-bin/power-switch-cgi?sid=%s&state=%s"
 const MAX_Switch = 2
 // ---------------------------------
 type state_switch struct {
