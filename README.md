@@ -6,6 +6,18 @@ GodFrey4Home is provide under MIT License.
 
 GodFrey4Home is currently a  set of independent programm.
 
+## homekit-tasmota-switch.go
+
+* [src/homekit-tasmota-switch.go](src/homekit-tasmota-switch.go)
+
+   control and expose 6 devices , these devices use a Tasmota firmware ( https://tasmota.github.io/docs/ )
+   was installed with tuya-convert ( https://github.com/ct-Open-Source/tuya-convert )
+
+    - 2 Gosund WP212 ( https://amzn.to/2P5Pecb )
+          the template for Tasmota is https://blakadder.github.io/templates/gosund_WP212.html
+    - 4 Gosund WP5   ( https://amzn.to/359w8Yy )
+          the template for Tasmota is https://blakadder.github.io/templates/gosund_WP5.html
+
 ## power-switch-cgi
 * [src/power-switch-cgi.go](src/power-switch-cgi.go)
 
@@ -29,18 +41,6 @@ A homekit bridge , that will access a relay board expose by power-switch-cgi
 
 This bridge use the package [github.com/brutella/hc](https://github.com/brutella/hc) , for providing the HomeKit interface.
 
-## homekit-tasmota-switch.go
-
-* [src/homekit-tasmota-switch.go](src/homekit-tasmota-switch.go)
-
-   control and expose 6 devices , these devices use a Tasmota firmware ( https://tasmota.github.io/ ) 
-   was installed with tuya-convert ( https://github.com/ct-Open-Source/tuya-convert )
-   
-    - 2 Gosund WP212 ( https://amzn.to/2P5Pecb )
-          the template for Tasmota is https://blakadder.github.io/templates/gosund_WP5.html 
-    - 4 Gosund WP5   ( https://amzn.to/359w8Yy )
-          the template for Tasmota is https://blakadder.github.io/templates/gosund_WP212.html
-	  
 ## to compile
 
 ### for your local architecture
