@@ -1,0 +1,16 @@
+{
+    "tasmotaswitchs" : [
+	[	{ "host" : "192.168.111.118" , "powerlabel" : "POWER1" } ,
+		{ "host" : "192.168.111.118" , "powerlabel" : "POWER2" } ,
+		{ "host" : "192.168.111.111" , "powerlabel" : "POWER"  } ] ,
+	[       { "host" : "192.168.111.119" , "powerlabel" : "POWER1" } ,
+		{ "host" : "192.168.111.119" , "powerlabel" : "POWER2" } ] ,
+	[       { "host" : "192.168.111.117" , "powerlabel" : "POWER1" } ,
+		{ "host" : "192.168.111.117" , "powerlabel" : "POWER2" } ,
+		{ "host" : "192.168.111.112" , "powerlabel" : "POWER"  } ,
+		{ "host" : "192.168.111.113" , "powerlabel" : "POWER"  } ,
+		{ "host" : "192.168.111.114" , "powerlabel" : "POWER"  } ] ,
+	{ "host" : "192.168.111.115" , "powerlabel" : "POWER"  } ,
+	{ "host" : "192.168.111.116" , "powerlabel" : "POWER"  } 
+    ]
+}

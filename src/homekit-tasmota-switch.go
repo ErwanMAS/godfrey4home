@@ -1,133 +1,234 @@
-// ------------------------------------------------------------------------------------------  
+// ------------------------------------------------------------------------------------------
 package main
 
 import (
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
-	"github.com/brutella/hc/service"	
 	"github.com/brutella/hc/log"
-	"net/http"
+	"github.com/brutella/hc/service"
 	"github.com/valyala/fastjson"
-	"time"
-	"io/ioutil"
-	"strconv"
-	"fmt"
 )
-// ------------------------------------------------------------------------------------------  
+
+// ------------------------------------------------------------------------------------------
 var myClient = &http.Client{Timeout: 10 * time.Second}
 
-func getJson(url string) (error,*fastjson.Value) {
-    r, err := myClient.Get(url)
-    if err != nil {
-        return err,nil
-    }
-    defer r.Body.Close()
-    body, err := ioutil.ReadAll(r.Body)
-    var p fastjson.Parser
-    v , err := p.ParseBytes(body)
-    return err,v
+func getJson(url string) *fastjson.Value {
+	r, err := myClient.Get(url)
+	if err != nil {
+		return nil
+	}
+	defer r.Body.Close()
+	body, _ := io.ReadAll(r.Body)
+	var p fastjson.Parser
+	v, _ := p.ParseBytes(body)
+	return v
 }
-/* ------------------------------------------------------------------------------------------  
-   control and expose 6 devices , these devices use a tasmota firmware ( https://tasmota.github.io/ ) 
 
-    - 4 Gosund WP5   ( https://blakadder.github.io/templates/gosund_WP5.html )
-    - 2 Gosund WP212 ( https://blakadder.github.io/templates/gosund_WP212.html )
+/* ------------------------------------------------------------------------------------------
+   control and expose tasmota devices ( https://tasmota.github.io/ )
+
+    - 6 Gosund WP5   ( https://blakadder.github.io/templates/gosund_WP5.html )
+    - 3 Gosund WP212 ( https://blakadder.github.io/templates/gosund_WP212.html )
 
 
    For fetch the status on WP5
-      curl http://192.168.111.111/cm?cmnd=Power1
+      curl http://192.168.111.111/cm?cmnd=Power
 
    For fetch the status on WP211
       curl http://192.168.111.118/cm?cmnd=Power1
     or
       curl http://192.168.111.118/cm?cmnd=Power2
 
-   To set the power Off 
-      curl http://192.168.111.111/cm?cmnd=Power1%20Off
+   To set the power Off
+      curl http://192.168.111.111/cm?cmnd=Power%20Off
 
    To set the power On
-      curl http://192.168.111.111/cm?cmnd=Power1%20On
+      curl http://192.168.111.118/cm?cmnd=Power1%20On
 
    The reply is a json strean :
-      {"POWER1":"ON"} or {"POWER2":"OFF"}
+      {"POWER1":"ON"} or {"POWER2":"OFF"} or {"POWER":"OFF"}
 
+
+   the configuration is defined in a json file named homekit-tasmota-config.json
 
    ------------------------------------------------------------------------------------------ */
-const MAX_Switch = 8
-// ---------------------------------
-type state_switch struct {
-	POWER   string
+// ------------------------------------------------------------------------------------------
+type tasmotaSwitch struct {
+	id         int
+	grp        int
+	host       string
+	powerlabel string
 }
-// ---------------------------------
-func ReturnRemoteSwitch ( id_switch int , change bool ) (string,int) {
-	var myRemoteSwitch string
-	var j int
 
-	switch {
-	case id_switch == 5 : { myRemoteSwitch="http://192.168.111.111/cm?cmnd=POWER1" ; j = 0 ; }
-	case id_switch == 6 : { myRemoteSwitch="http://192.168.111.112/cm?cmnd=POWER1" ; j = 0 ; }
-	case id_switch == 7 : { myRemoteSwitch="http://192.168.111.113/cm?cmnd=POWER1" ; j = 0 ; }
-	case id_switch == 8 : { myRemoteSwitch="http://192.168.111.114/cm?cmnd=POWER1" ; j = 0 ; }
-	case ( id_switch >= 3 && id_switch <= 4 ) : { myRemoteSwitch=fmt.Sprintf("http://192.168.111.115/cm?cmnd=POWER%d",id_switch-2) ; j=id_switch-2 ; }
-	case ( id_switch >= 1 && id_switch <= 2 ) : { myRemoteSwitch=fmt.Sprintf("http://192.168.111.116/cm?cmnd=POWER%d",id_switch)   ; j=id_switch ; }
+// ------------------------------------------------------------------------------------------
+func CheckObject(sw_val *fastjson.Value, sw_ind int, grpid int, last_id *int) (bool, *tasmotaSwitch) {
+	if !sw_val.Exists("host") {
+		log.Debug.Println("No key host in Element ", sw_ind+1, " from tasmotaswitch ")
+		return false, nil
 	}
-	if ( change ) {
-		return myRemoteSwitch+"%%20%s",j  ;
+	if !sw_val.Exists("powerlabel") {
+		log.Debug.Println("No key host in Element ", sw_ind+1, " from tasmotaswitch ")
+		return false, nil
+	}
+	if sw_val.Get("host").Type() != fastjson.TypeString {
+		log.Debug.Println("Wrong type for host in Element ", sw_ind+1, " from tasmotaswitch")
+		return false, nil
+	}
+	if sw_val.Get("powerlabel").Type() != fastjson.TypeString {
+		log.Debug.Println("Wrong type for host in Element ", sw_ind+1, " from tasmotaswitch")
+		return false, nil
+	}
+	*last_id++
+	result := tasmotaSwitch{id: *last_id, grp: grpid, host: string(sw_val.GetStringBytes("host")), powerlabel: string(sw_val.GetStringBytes("powerlabel"))}
+	return true, &result
+}
+
+// ------------------------------------------------------------------------------------------
+func CheckArrayOfSwitch(v *fastjson.Value, sw_ind_offset int, grpid int, last_id *int) (bool, []tasmotaSwitch) {
+	var result []tasmotaSwitch
+	for sw_ind, sw_val := range v.GetArray() {
+		if sw_val.Type() != fastjson.TypeObject {
+			log.Debug.Println("Element ", sw_ind+1, " from tasmotaswitchs is not a object ", v.Type())
+			return false, nil
+		}
+		check_state, check_result := CheckObject(sw_val, sw_ind_offset+sw_ind, grpid, last_id)
+		if !check_state {
+			return false, nil
+		}
+		result = append(result, *check_result)
+	}
+	return true, result
+}
+
+// ------------------------------------------------------------------------------------------
+func LoadConfig(config_file string) (bool, []tasmotaSwitch) {
+	jsondatastr, _ := os.ReadFile(config_file)
+
+	var p fastjson.Parser
+	v, err := p.ParseBytes(jsondatastr)
+	if err != nil {
+		log.Debug.Println("Can not parse file")
+		log.Debug.Println(jsondatastr)
+		return false, nil
+	}
+	if v.Type() != fastjson.TypeObject {
+		log.Debug.Println("Root type is not a object ", v.Type())
+		return false, nil
+	}
+	if !v.Exists("tasmotaswitchs") {
+		log.Debug.Println("No key tasmotaswitchs")
+		return false, nil
+	}
+	if v.Get("tasmotaswitchs").Type() != fastjson.TypeArray {
+		log.Debug.Println("Value tasmotaswitchs is not a array", v.Type())
+		return false, nil
+	}
+	var result []tasmotaSwitch
+	last_id := 0
+	last_grp := 0
+	for sw_ind, sw_val := range v.Get("tasmotaswitchs").GetArray() {
+		if sw_val.Type() == fastjson.TypeArray {
+			last_grp++
+			temp_err, temp_res := CheckArrayOfSwitch(sw_val, sw_ind, last_grp, &last_id)
+			if !temp_err {
+				return false, nil
+			}
+			result = append(result, temp_res...)
+			log.Debug.Printf("config grp %2d len %2d", last_grp, len(temp_res))
+		} else {
+			if sw_val.Type() != fastjson.TypeObject {
+				log.Debug.Println("Element ", sw_ind+1, " from tasmotaswitchs is not a object ", v.Type())
+				return false, nil
+			}
+			last_grp++
+			check_state, check_result := CheckObject(sw_val, sw_ind, last_grp, &last_id)
+			if !check_state {
+				return false, nil
+			}
+			result = append(result, *check_result)
+		}
+	}
+	if len(result) > 0 {
+		return true, result
 	} else {
-		return myRemoteSwitch,j ;
+		log.Debug.Println("tasmotaswitch array is empty")
+		return false, nil
 	}
 }
 
-func ChangeSwitch ( id_switch string , new_state_bool bool ) {
-	var id_switch_num int
-	var j int
+// ------------------------------------------------------------------------------------------
+func ReturnRemoteSwitch(cfg_a_switch tasmotaSwitch, change bool) string {
+	myRemoteSwitch := fmt.Sprintf("http://%s/cm?cmnd=%s", cfg_a_switch.host, cfg_a_switch.powerlabel)
+	if change {
+		return myRemoteSwitch + "%%20%s"
+	} else {
+		return myRemoteSwitch
+	}
+}
+
+// ------------------------------------------------------------------------------------------
+func ChangeSwitch(cfg_a_switch tasmotaSwitch, new_state_bool bool) {
+	log.Debug.Printf("Client changed switch %d to %d", cfg_a_switch.id, new_state_bool)
 	var new_state string
-	var myRemoteSwitch string
-	id_switch_num , _ = strconv.Atoi(id_switch)
-	myRemoteSwitch,j=ReturnRemoteSwitch(id_switch_num,true)
-	if ( new_state_bool ) {
+	myRemoteSwitch := ReturnRemoteSwitch(cfg_a_switch, true)
+	if new_state_bool {
 		new_state = "On"
 	} else {
 		new_state = "Off"
 	}
-	_,c := getJson(fmt.Sprintf(myRemoteSwitch,new_state))
-	if ( j == 0 ) {
-		log.Debug.Printf("Client changed switch %d to %s / new state %s ",id_switch,new_state,c.GetStringBytes("POWER"))
-	} else { 
-		log.Debug.Printf("Client changed switch %d to %s / new state %s ",id_switch,new_state,c.GetStringBytes("POWER"+strconv.Itoa(j)))
-	}
+	c := getJson(fmt.Sprintf(myRemoteSwitch, new_state))
+	log.Debug.Printf("Client changed switch %d to %s / new state %s ", cfg_a_switch.id, new_state, c.GetStringBytes(cfg_a_switch.powerlabel))
 }
-// ------------------------------------------------------------------------------------------  
+
+// ------------------------------------------------------------------------------------------
 func main() {
 	// ----------------------------------------------------------------------------------
 	log.Debug.Enable()
 	// ----------------------------------------------------------------------------------
+	stateload, switchconfig := LoadConfig("./homekit-tasmota-config.json")
+	if !stateload || switchconfig == nil {
+		log.Debug.Println("Can not load config")
+		os.Exit(1)
+	}
+	// ----------------------------------------------------------------------------------
 	// use of variadic functions https://gobyexample.com/variadic-functions
 
-	all_switchs := make([]*service.Switch,MAX_Switch)
-	all_access := make([]*accessory.Accessory,MAX_Switch)
+	all_switchs := make([]*service.Switch, len(switchconfig))
+	all_access := make([]*accessory.Accessory, len(switchconfig))
 
-	CntA :=0
-	
-	for i:= 1 ; i <=MAX_Switch ; i++ {
-		j := strconv.Itoa(i)
-		if ( i >=2 && i <= 4 ) {
-			a_srv:=service.NewSwitch()
-			a_srv.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch (j,on ) })
-			all_access[0].AddService(a_srv.Service)
-			all_switchs[i-1] =  a_srv
+	CntAcc := 0
+	LastSwitchGrp := 0
+
+	log.Debug.Printf("switch config len %d", len(switchconfig))
+	for ind, cfg_cur_switch := range switchconfig {
+		if LastSwitchGrp == cfg_cur_switch.grp {
+			a_srv := service.NewSwitch()
+			a_srv.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(cfg_cur_switch, on) })
+			all_access[CntAcc-1].AddService(a_srv.Service)
+			all_switchs[ind] = a_srv
 		} else {
-			a_acc := accessory.NewSwitch(accessory.Info{Name: "Switch"+j})
-			all_switchs[i-1] =  a_acc.Switch
-			a_acc.Switch.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch (j,on ) })
-			all_access[CntA] = a_acc.Accessory
-			CntA++
+			a_acc := accessory.NewSwitch(accessory.Info{
+				Name:  "Switch" + strconv.Itoa(CntAcc+1),
+				Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: "850010C7-51BB-46D2-B033-" + strconv.Itoa(CntAcc+1),
+			})
+			all_switchs[ind] = a_acc.Switch
+			a_acc.Switch.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(cfg_cur_switch, on) })
+			all_access[CntAcc] = a_acc.Accessory
+			CntAcc++
+			LastSwitchGrp = cfg_cur_switch.grp
 		}
 	}
 	// ----------------------------------------------------------------------------------
-	config := hc.Config{Pin: "12344321", Port: "12345", StoragePath: "./db"}
-	t, err := hc.NewIPTransport(config,all_access[0],all_access[1:5]...)
+	config := hc.Config{Pin: "12345321", Port: "12345", StoragePath: "./db"}
 
+	t, err := hc.NewIPTransport(config, all_access[0], all_access[1:CntAcc]...)
 	if err != nil {
 		log.Info.Panic(err)
 	}
@@ -135,20 +236,13 @@ func main() {
 	// Periodically check if physical status of the switch are identical to current state
 	go func() {
 		for {
-			for i:= 1 ; i <=MAX_Switch ; i++ {
-				var rurl string
-				var rj   int
-				rurl,rj = ReturnRemoteSwitch(i,false)
-				_,s := getJson(rurl)
-				var p string
-				if ( rj == 0 ) {
-					p=string(s.GetStringBytes("POWER"))
-				} else {
-					p=string(s.GetStringBytes("POWER"+strconv.Itoa(rj)))
-				}
-				log.Debug.Printf("Switch %d (%d) (%s) is %s\n",i,rj,rurl,p)
-				if all_switchs[i-1].On.GetValue() != ( p == "ON" ) {
-					all_switchs[i-1].On.SetValue( p == "ON")
+			for i := 1; i <= len(switchconfig); i++ {
+				rurl := ReturnRemoteSwitch(switchconfig[i-1], false)
+				s := getJson(rurl)
+				p := string(s.GetStringBytes(switchconfig[i-1].powerlabel))
+				log.Debug.Printf("Switch %2d/%2d (%s) (%s) is %s\n", switchconfig[i-1].id, switchconfig[i-1].grp, switchconfig[i-1].powerlabel, rurl, p)
+				if all_switchs[i-1].On.GetValue() != (p == "ON") {
+					all_switchs[i-1].On.SetValue(p == "ON")
 				}
 			}
 			time.Sleep(6 * time.Second)
@@ -164,6 +258,5 @@ func main() {
 	log.Debug.Println("This is done")
 	// ----------------------------------------------------------------------------------
 }
-// ------------------------------------------------------------------------------------------  
 
-
+// ------------------------------------------------------------------------------------------
