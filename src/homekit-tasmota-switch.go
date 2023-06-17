@@ -208,9 +208,10 @@ func main() {
 
 	log.Debug.Printf("switch config len %d", len(switchconfig))
 	for ind, cfg_cur_switch := range switchconfig {
+		local_copy_cfg := cfg_cur_switch
 		if LastSwitchGrp == cfg_cur_switch.grp {
 			a_srv := service.NewSwitch()
-			a_srv.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(cfg_cur_switch, on) })
+			a_srv.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(local_copy_cfg, on) })
 			all_access[CntAcc-1].AddService(a_srv.Service)
 			all_switchs[ind] = a_srv
 		} else {
@@ -219,7 +220,7 @@ func main() {
 				Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: "850010C7-51BB-46D2-B033-" + strconv.Itoa(CntAcc+1),
 			})
 			all_switchs[ind] = a_acc.Switch
-			a_acc.Switch.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(cfg_cur_switch, on) })
+			a_acc.Switch.On.OnValueRemoteUpdate(func(on bool) { ChangeSwitch(local_copy_cfg, on) })
 			all_access[CntAcc] = a_acc.Accessory
 			CntAcc++
 			LastSwitchGrp = cfg_cur_switch.grp
