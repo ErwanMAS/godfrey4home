@@ -297,8 +297,8 @@ func main() {
 	server.Addr = fmt.Sprintf(":%d", 12345)
 	// ----------------------------------------------------------------------------------
 	// Periodically check if physical status of the switch are identical to current state
-	for ind , _ := range switchconfig {
-		go func(j int ) {
+	for ind := range switchconfig {
+		go func(j int) {
 			for {
 				rurl := ReturnRemoteSwitch(switchconfig[j], false)
 				s := getJson(rurl)
