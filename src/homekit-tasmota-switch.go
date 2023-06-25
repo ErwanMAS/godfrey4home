@@ -268,7 +268,7 @@ func main() {
 			if local_copy_cfg.kind == "switch" {
 				a_acc := accessory.NewSwitch(accessory.Info{
 					Name:  "Switch" + strconv.Itoa(CntAcc+1),
-					Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: "850010C7-51BB-46D2-B033-" + strconv.Itoa(CntAcc+1),
+					Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: fmt.Sprintf("850010C7-51BB-46D2-B033-50CE%08X", CntAcc+1),
 				})
 				all_access[CntAcc] = a_acc.A
 				all_switchs[ind] = a_acc.Switch.On
@@ -276,7 +276,7 @@ func main() {
 			if local_copy_cfg.kind == "light" {
 				a_acc := accessory.NewLightbulb(accessory.Info{
 					Name:  "Light" + strconv.Itoa(CntAcc+1),
-					Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: "850010C7-51BB-46D2-B033-" + strconv.Itoa(CntAcc+1),
+					Model: "homekit-tasmota-switch.go", Manufacturer: "MAS", SerialNumber: fmt.Sprintf("850010C7-51BB-46D2-B033-50CE%08X", CntAcc+1),
 				})
 				all_access[CntAcc] = a_acc.A
 				all_switchs[ind] = a_acc.Lightbulb.On
