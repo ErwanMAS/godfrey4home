@@ -318,8 +318,8 @@ func main() {
 				if must_log {
 					log.Debug.Printf("Switch %2d/%2d (%s) (%s) is %s\n", switchconfig[j].id, switchconfig[j].grpid, switchconfig[j].powerlabel, rurl, p)
 				}
+				time.Sleep(1 * time.Second)
 			}
-			time.Sleep(1 * time.Second)
 		}(ind)
 	}
 	// ----------------------------------------------------------------------------------
