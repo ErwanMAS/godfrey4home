@@ -1,1 +1,0 @@
-../../src/homekit-tasmota-switch.go
