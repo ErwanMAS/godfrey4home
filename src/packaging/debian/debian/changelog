@@ -1,0 +1,5 @@
+homekit-tasmota-gw (0.1-git-564ad5fa-1) UNRELEASED; urgency=medium
+
+  * Initial packaging work with dpkg-buildpackage.
+
+ -- Erwan MAS <emas@emotic.info>  Sun, 14 Apr 2024 17:01:15 -0400

@@ -1,0 +1,10 @@
+Source: homekit-tasmota-gw
+Maintainer: Erwan MAS <erwan@mas.nom.fr>
+Build-Depends: build-essential,debhelper ( >= 12 )
+
+Package: homekit-tasmota-gw
+Architecture: any
+Description: homekit-tasmota-gw package
+ homekit-tasmota-gw emulate a homekit device in your local
+ network for all yours tasmota device .
+
