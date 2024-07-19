@@ -77,6 +77,13 @@ type tasmotaSwitch struct {
 }
 
 // ------------------------------------------------------------------------------------------
+type mainConfig struct {
+	pin  int64
+	port int
+	db   string
+}
+
+// ------------------------------------------------------------------------------------------
 func CheckObject(sw_val *fastjson.Value, sw_ind int, grpid int, last_id *int) (bool, *tasmotaSwitch) {
 	if !sw_val.Exists("host") {
 		log.Debug.Println("No key host in Element ", sw_ind+1, " from tasmotaswitch ")
@@ -125,27 +132,62 @@ func CheckArrayOfSwitch(v *fastjson.Value, sw_ind_offset int, grpid int, last_id
 }
 
 // ------------------------------------------------------------------------------------------
-func LoadConfig(config_file string) (bool, []tasmotaSwitch) {
+func LoadConfig(config_file string) (bool, []tasmotaSwitch, *mainConfig) {
 	jsondatastr, _ := os.ReadFile(config_file)
+
+	localconfig := mainConfig{pin: 12391235, port: 22339, db: "/var/lib/homekit-tasmota-gw"}
 
 	var p fastjson.Parser
 	v, err := p.ParseBytes(jsondatastr)
 	if err != nil {
 		log.Debug.Println("Can not parse file")
 		log.Debug.Println(jsondatastr)
-		return false, nil
+		return false, nil, nil
 	}
 	if v.Type() != fastjson.TypeObject {
 		log.Debug.Println("Root type is not a object ", v.Type())
-		return false, nil
+		return false, nil, nil
 	}
+	// ----------------------------------------------------------------------------------
+	if v.Exists("server") {
+		s := v.Get("server")
+		if s.Type() != fastjson.TypeObject {
+			log.Debug.Println("server type is not a object")
+			return false, nil, nil
+		}
+		if s.Exists("pin") {
+			p := s.Get("pin")
+			if p.Type() != fastjson.TypeNumber {
+				log.Debug.Println("server.pin type is not a number")
+				return false, nil, nil
+			}
+			localconfig.pin = p.GetInt64()
+		}
+		if s.Exists("port") {
+			p := s.Get("port")
+			if p.Type() != fastjson.TypeNumber {
+				log.Debug.Println("server.port type is not a number")
+				return false, nil, nil
+			}
+			localconfig.port = p.GetInt()
+		}
+		if s.Exists("db") {
+			p := s.Get("db")
+			if p.Type() != fastjson.TypeString {
+				log.Debug.Println("server.db type is not a string")
+				return false, nil, nil
+			}
+			localconfig.db = string(p.GetStringBytes())
+		}
+	}
+	// ----------------------------------------------------------------------------------
 	if !v.Exists("tasmotaswitchs") {
 		log.Debug.Println("No key tasmotaswitchs")
-		return false, nil
+		return false, nil, nil
 	}
 	if v.Get("tasmotaswitchs").Type() != fastjson.TypeArray {
 		log.Debug.Println("Value tasmotaswitchs is not a array", v.Type())
-		return false, nil
+		return false, nil, nil
 	}
 	var result []tasmotaSwitch
 	last_id := 0
@@ -155,19 +197,19 @@ func LoadConfig(config_file string) (bool, []tasmotaSwitch) {
 			last_grp++
 			temp_err, temp_res := CheckArrayOfSwitch(sw_val, sw_ind, last_grp, &last_id)
 			if !temp_err {
-				return false, nil
+				return false, nil, nil
 			}
 			result = append(result, temp_res...)
 			log.Debug.Printf("config grp %2d len %2d", last_grp, len(temp_res))
 		} else {
 			if sw_val.Type() != fastjson.TypeObject {
 				log.Debug.Println("Element ", sw_ind+1, " from tasmotaswitchs is not a object ", v.Type())
-				return false, nil
+				return false, nil, nil
 			}
 			last_grp++
 			check_state, check_result := CheckObject(sw_val, sw_ind, last_grp, &last_id)
 			if !check_state {
-				return false, nil
+				return false, nil, nil
 			}
 			result = append(result, *check_result)
 		}
@@ -199,10 +241,10 @@ func LoadConfig(config_file string) (bool, []tasmotaSwitch) {
 				result[j].len_grp = maxid + 1 - minid
 			}
 		}
-		return true, result
+		return true, result, &localconfig
 	} else {
 		log.Debug.Println("tasmotaswitch array is empty")
-		return false, nil
+		return false, nil, nil
 	}
 }
 
@@ -235,7 +277,7 @@ func main() {
 	// ----------------------------------------------------------------------------------
 	log.Debug.Enable()
 	// ----------------------------------------------------------------------------------
-	stateload, switchconfig := LoadConfig("./homekit-tasmota-config.json")
+	stateload, switchconfig, serverconfig := LoadConfig("/etc/homekit-tasmota-gw/config.json")
 	if !stateload || switchconfig == nil {
 		log.Debug.Println("Can not load config")
 		os.Exit(1)
@@ -288,13 +330,13 @@ func main() {
 		}
 	}
 	// ----------------------------------------------------------------------------------
-	fs_store := hap.NewFsStore("./db")
+	fs_store := hap.NewFsStore(serverconfig.db)
 	server, err := hap.NewServer(fs_store, all_access[0], all_access[1:CntAcc]...)
 	if err != nil {
 		log.Info.Panic(err)
 	}
-	server.Pin = "12345321"
-	server.Addr = fmt.Sprintf(":%d", 12345)
+	server.Pin = string(serverconfig.pin)
+	server.Addr = fmt.Sprintf(":%d", serverconfig.port)
 	// ----------------------------------------------------------------------------------
 	// Periodically check if physical status of the switch are identical to current state
 	for ind := range switchconfig {

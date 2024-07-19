@@ -1,0 +1,10 @@
+[Unit]
+Description=Emulate a homekit device in your local network for all yours tasmota device .
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/homekit-tasmota-gw
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

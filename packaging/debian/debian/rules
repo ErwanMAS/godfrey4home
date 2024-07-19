@@ -10,4 +10,3 @@ binary:
 	make install DESTDIR=debian/homekit-tasmota-gw
 	dh_gencontrol
 	dh_builddeb
-	
