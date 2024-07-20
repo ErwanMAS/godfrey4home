@@ -336,7 +336,7 @@ func main() {
 	if err != nil {
 		log.Info.Panic(err)
 	}
-	server.Pin = string(serverconfig.pin)
+	server.Pin = strconv.FormatInt(serverconfig.pin,10)
 	server.Addr = fmt.Sprintf(":%d", serverconfig.port)
 	// ----------------------------------------------------------------------------------
 	// Periodically check if physical status of the switch are identical to current state
@@ -379,8 +379,8 @@ func main() {
 	}()
 	// ----------------------------------------------------------------------------------
 	log.Debug.Println("now we must listen and serve")
-	log.Debug.Printf("pin: %d",serverconfig.pin)
-	log.Debug.Printf("port: %d",serverconfig.port)
+	log.Debug.Printf("server.Pin: %s",server.Pin)
+	log.Debug.Printf("server.Addr: %s",server.Addr)
 	log.Debug.Printf("db: %s",serverconfig.db)
 	server.ListenAndServe(ctx)
 	// ----------------------------------------------------------------------------------
