@@ -282,6 +282,7 @@ func main() {
 		log.Debug.Println("Can not load config")
 		os.Exit(1)
 	}
+	log.Debug.Println("config is loaded")
 	// ----------------------------------------------------------------------------------
 	// use of variadic functions https://gobyexample.com/variadic-functions
 
@@ -374,8 +375,13 @@ func main() {
 		<-c
 		signal.Stop(c)
 		cancel()
+		log.Debug.Printf("STOP STOP STOP")
 	}()
 	// ----------------------------------------------------------------------------------
+	log.Debug.Println("now we must listen and serve")
+	log.Debug.Printf("pin: %d",serverconfig.pin)
+	log.Debug.Printf("port: %d",serverconfig.port)
+	log.Debug.Printf("db: %s",serverconfig.db)
 	server.ListenAndServe(ctx)
 	// ----------------------------------------------------------------------------------
 }
