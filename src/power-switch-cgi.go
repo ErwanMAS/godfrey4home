@@ -26,6 +26,8 @@ import (
 //
 // i dont have a X440 , if someone want to send me one , free of charge , i will be happy , to modify my programm
 //
+// https://www.sohamkamani.com/blog/2017/09/13/how-to-build-a-web-application-in-golang/
+//
 // ------------------------------------------------------------------------------------------
 const SERIAL_DEVICE = "/dev/ttyUSB0"
 const LOCK_4_SERIAL_DEVICE = "/var/lock/ttyUSB0.lock"
