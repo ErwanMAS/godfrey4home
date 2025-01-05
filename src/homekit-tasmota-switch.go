@@ -214,6 +214,7 @@ func LoadConfig(config_file string) (bool, []tasmotaSwitch, *mainConfig) {
 			result = append(result, *check_result)
 		}
 	}
+	log.Debug.Printf("config len res %2d lastgrp %2d lastid %2d", len(result),last_grp,last_id)
 	if len(result) > 0 {
 		// --------------------------------------------------------------------------
 		grpid := math.MinInt
