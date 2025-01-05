@@ -1,6 +1,6 @@
 module godfrey
 
-go 1.22
+go 1.23
 
 require (
 	github.com/brutella/hap v0.0.35
